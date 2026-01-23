@@ -285,6 +285,32 @@ VERIFICATION:
   - [ ] Sample sequences checked manually
 ```
 
+### Step 5B: Taxonomic Classification
+
+```
+INPUT:
+  - File: final.contigs.fa
+  - Contig count: [TBD]
+
+PROCESS:
+  - Tool: Kraken2 / CAT / DIAMOND-LCA
+  - Purpose: Assign microbial source to each contig
+
+OUTPUT:
+  - File: protein_taxonomy.tsv
+  - Columns: protein_id, contig_id, taxonomy
+
+TOP ORGANISMS:
+  1. [Organism 1]: [count] proteins
+  2. [Organism 2]: [count] proteins
+  3. [Organism 3]: [count] proteins
+  ...
+
+VERIFICATION:
+  - [ ] Organisms make sense for ISS (human-associated microbes expected)
+  - [ ] No unexpected organisms (contamination check)
+```
+
 ### Step 7 → Step 8: Verification & Classification
 
 ```
@@ -304,6 +330,37 @@ OUTPUT:
     - Type E (Artifact): [TBD]
 
 FINAL COUNT: [TBD] verified novel proteins
+```
+
+### Step 8: Final Results Table
+
+```
+INPUT:
+  - truly_novel.faa (proteins)
+  - protein_taxonomy.tsv (organism assignments)
+  - verification_results.json (classifications)
+
+PROCESS:
+  - Tool: 08_create_final_table.py
+  - Merges all data into annotated table
+
+OUTPUT:
+  - File: novel_proteins_annotated.tsv
+
+TABLE COLUMNS:
+  | protein_id | contig_id | organism | classification | length_aa | mw_kda | sequence |
+
+SUMMARY BY ORGANISM:
+  | Organism | Count | % |
+  |----------|-------|---|
+  | [TBD]    | [TBD] | [TBD] |
+
+SUMMARY BY TYPE:
+  | Type | Count | % |
+  |------|-------|---|
+  | Type A (Completely novel) | [TBD] | [TBD] |
+  | Type B (Structure known)  | [TBD] | [TBD] |
+  | ...  | ... | ... |
 ```
 
 ---

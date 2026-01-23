@@ -115,6 +115,15 @@ fi
 [[ "$run_step4" == true ]] && run_step "Step 4: ORF Prediction" "${SCRIPT_DIR}/04_orf_prediction.sh"
 [[ "$run_step5" == true ]] && run_step "Step 5: Homology Search" "${SCRIPT_DIR}/05_homology_search.sh"
 
+# Step 5B: Taxonomic Classification
+if [[ "$run_step5" == true ]]; then
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "Running: Step 5B: Taxonomic Classification"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    bash "${SCRIPT_DIR}/05b_taxonomic_classification.sh"
+fi
+
 # Step 6: Quality Filtering (Python)
 if [[ "$run_step6" == true ]]; then
     echo ""
@@ -148,6 +157,21 @@ if [[ "$run_step7" == true ]]; then
         --generate-samples
 fi
 
+# Step 8: Create Final Table with Organism Annotations
+if [[ "$run_step7" == true ]]; then
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "Running: Step 8: Create Final Results Table"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+    python3 "${SCRIPT_DIR}/08_create_final_table.py" \
+        --proteins "${OUTPUT_DIR}/truly_novel.faa" \
+        --taxonomy "${INTERMEDIATE_DIR}/taxonomy/protein_taxonomy.tsv" \
+        --classifications "${OUTPUT_DIR}/verification_results.json" \
+        --output-tsv "${OUTPUT_DIR}/novel_proteins_annotated.tsv" \
+        --output-summary "${OUTPUT_DIR}/RESULTS_SUMMARY.md"
+fi
+
 echo ""
 echo "╔══════════════════════════════════════════════════════════════════╗"
 echo "║                    PIPELINE COMPLETE                              ║"
@@ -158,11 +182,17 @@ echo "Pipeline completed: $(date -Iseconds)" >> "${AUDIT_DIR}/timestamps.log"
 echo ""
 echo "Output files:"
 echo "  - Novel proteins: ${OUTPUT_DIR}/truly_novel.faa"
+echo "  - Annotated table: ${OUTPUT_DIR}/novel_proteins_annotated.tsv"
+echo "  - Results summary: ${OUTPUT_DIR}/RESULTS_SUMMARY.md"
 echo "  - Verification report: ${OUTPUT_DIR}/VERIFICATION_REPORT.md"
 echo "  - Audit log: ${AUDIT_DIR}/commands.log"
 echo ""
+echo "Final table columns:"
+echo "  protein_id | contig_id | organism | classification | length_aa | mw_kda | sequence"
+echo ""
 echo "Next steps:"
-echo "  1. Run manual HHblits verification (see report)"
-echo "  2. Run manual Foldseek verification (see report)"
-echo "  3. Complete NCBI nr spot check"
-echo "  4. Update verification report with results"
+echo "  1. Review RESULTS_SUMMARY.md for organism breakdown"
+echo "  2. Run manual HHblits verification (see report)"
+echo "  3. Run manual Foldseek verification (see report)"
+echo "  4. Complete NCBI nr spot check"
+echo "  5. Update verification report with results"
