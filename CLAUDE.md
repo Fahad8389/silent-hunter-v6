@@ -70,9 +70,23 @@ Step 2: QC (fastp)
 Step 3: Assembly (MEGAHIT)
 Step 4: ORF Prediction (Prodigal)
 Step 5: Homology Search (DIAMOND vs UniRef90, SwissProt, Human)
+Step 5B: Taxonomic Classification (Kraken2/CAT/DIAMOND-LCA)
 Step 6: Quality Filter (Python)
 Step 7: Verification (Python + Manual)
+Step 8: Final Table (protein + organism + classification)
 ```
+
+## Final Output Table Format
+
+```
+novel_proteins_annotated.tsv columns:
+| protein_id | contig_id | organism | classification | length_aa | mw_kda | sequence |
+```
+
+Each protein tagged with:
+- **Microbial source** (which organism it came from)
+- **Classification** (Type A-E)
+- **Properties** (length, molecular weight)
 
 ## Expected Results
 
