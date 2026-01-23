@@ -1,0 +1,84 @@
+# Silent Hunter v6.0 .gitignore
+
+# Data files (too large for GitHub)
+*.fastq
+*.fastq.gz
+*.fasta
+*.fasta.gz
+*.faa
+*.fna
+*.fa
+*.gz
+
+# Database files
+*.dmnd
+*.hmm
+*.h3m
+*.h3i
+*.h3f
+*.h3p
+
+# Intermediate files
+*.m8
+*.gff
+*.sam
+*.bam
+
+# Assembly output
+assembly/
+megahit_out/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.egg-info/
+.eggs/
+*.egg
+.venv/
+venv/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs (keep structure, ignore contents)
+audit/*.log
+audit/*.md5
+!audit/.gitkeep
+
+# Results (keep structure)
+results/*.faa
+results/*.json
+!results/.gitkeep
+!results/figures/.gitkeep
+
+# Colab specific
+sample_data/
+drive/
+
+# Large intermediate files
+intermediate/
+data/
+
+# But keep the directory structure
+!audit/
+!results/
+!results/figures/

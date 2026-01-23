@@ -1,0 +1,180 @@
+# Silent Hunter v6.0 - Pipeline Parameters
+# Configuration file for documentation and reference
+
+# ============================================
+# Data Configuration
+# ============================================
+data:
+  # SRA Accession (ISS Metagenome GLDS-69)
+  sra_accession: "SRR6356483"
+  # NASA GeneLab dataset
+  genelab_id: "GLDS-69"
+  # Sample description
+  description: "ISS environmental surfaces (Node 1, Node 3)"
+
+# ============================================
+# Quality Control (fastp)
+# ============================================
+qc:
+  tool: "fastp"
+  version: "0.23+"
+  parameters:
+    detect_adapter_for_pe: true
+    cut_front: true
+    cut_tail: true
+    cut_window_size: 4
+    cut_mean_quality: 20
+    length_required: 50
+
+# ============================================
+# Assembly (MEGAHIT)
+# ============================================
+assembly:
+  tool: "MEGAHIT"
+  version: "1.2.9"
+  parameters:
+    min_contig_len: 500
+    k_min: 21
+    k_max: 141
+    k_step: 12
+    memory_fraction: 0.9
+
+# ============================================
+# ORF Prediction (Prodigal)
+# ============================================
+orf_prediction:
+  tool: "Prodigal"
+  version: "2.6.3"
+  parameters:
+    mode: "meta"  # Metagenomic mode
+
+# ============================================
+# Homology Search (DIAMOND)
+# ============================================
+homology_search:
+  tool: "DIAMOND"
+  version: "2.1+"
+  parameters:
+    identity_threshold: 25  # 25% identity cutoff
+    evalue: 1e-5
+    sensitivity: "sensitive"
+    max_target_seqs: 1
+
+  databases:
+    primary:
+      name: "UniRef90"
+      size: "184M sequences"
+      file: "uniref90.dmnd"
+      purpose: "Primary novelty filter"
+
+    secondary:
+      name: "SwissProt"
+      size: "570K sequences"
+      file: "swissprot.dmnd"
+      purpose: "Curated annotations"
+
+    contamination:
+      name: "Human proteome"
+      size: "20K sequences"
+      file: "human.dmnd"
+      purpose: "Contamination check"
+      identity_threshold: 50
+      evalue: 1e-10
+
+# ============================================
+# Quality Filtering
+# ============================================
+quality_filter:
+  min_protein_length: 100  # amino acids
+  require_start_codon: true  # Must start with M
+  no_internal_stops: true
+  complete_orfs_only: true  # partial=00 in Prodigal
+
+# ============================================
+# Verification Tests
+# ============================================
+verification:
+  # Test 1: Human contamination
+  human_contamination:
+    enabled: true
+    expected: 0  # Should have 0 matches
+
+  # Test 2: Amino acid composition
+  aa_composition:
+    enabled: true
+    chi_squared_threshold: 0.3  # Normal < 0.3
+
+  # Test 4: Protein classification
+  protein_classification:
+    enabled: true
+    real_threshold: 0.9  # >90% should be "likely real"
+
+  # Test 5: Chimera detection
+  chimera_detection:
+    tool: "VSEARCH"
+    method: "uchime_denovo"
+    enabled: true
+
+  # Test 6: Pfam domain search
+  pfam_search:
+    tool: "hmmscan"
+    database: "Pfam-A.hmm"
+    enabled: true
+
+  # Test 7: Remote homology (manual)
+  remote_homology:
+    tool: "HHblits/HHpred"
+    sample_size: 20
+    method: "manual"
+
+  # Test 8: Structural similarity (manual)
+  structural_similarity:
+    tools:
+      - "ESMFold"
+      - "Foldseek"
+    sample_size: 10
+    method: "manual"
+
+  # Test 9: Genomic context
+  genomic_context:
+    enabled: true
+    isolated_threshold: 0.3  # Flag if >30% isolated
+
+# ============================================
+# Classification Categories
+# ============================================
+classification:
+  type_a:
+    name: "Completely Novel"
+    description: "No sequence or structure homology"
+    expected_percentage: "10-20%"
+
+  type_b:
+    name: "Structure-Known"
+    description: "Novel sequence, known fold (Foldseek match)"
+    expected_percentage: "20-30%"
+
+  type_c:
+    name: "Remote Homolog"
+    description: "Detected by HHblits but not DIAMOND"
+    expected_percentage: "30-40%"
+
+  type_d:
+    name: "Domain Hybrid"
+    description: "Known Pfam domains in novel arrangement"
+    expected_percentage: "10-15%"
+
+  type_e:
+    name: "Possible Artifact"
+    description: "Chimeric, low-complexity, or isolated ORFs"
+    expected_percentage: "5-10%"
+
+# ============================================
+# Expected Results (100% Data)
+# ============================================
+expected_results:
+  total_contigs: "80,000-120,000"
+  n50: "1,000-1,500 bp"
+  total_orfs: "80,000-100,000"
+  novel_pre_filter: "20,000-25,000"
+  truly_novel: "2,500-3,500"
