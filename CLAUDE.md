@@ -18,29 +18,34 @@ See `FAHDYCONX.md` for full documentation system.
 
 ## Current Status
 
-**Date:** 2025-01-23
+**Date:** 2025-01-24
 
-### Completed
-- [x] Pipeline scripts created (01-07 + run_all.sh)
-- [x] Configuration files (parameters.sh, parameters.yaml)
-- [x] Documentation (README.md, METHODS.md, FAHDYCONX.md)
-- [x] Google Colab notebook (SilentHunter_v6.ipynb)
-- [x] GitHub repo created: https://github.com/Fahad8389/silent-hunter-v6
+### Session 1 Results (Lost due to Colab timeout)
+- Step 1: 40,440,324 paired-end reads extracted
+- Step 2: 79,292,500 reads after QC (98% survival)
+- Step 3: 312,709 contigs assembled (N50=1,733 bp) - took 8 hours
+- Step 4: 448,015 proteins predicted (208,489 complete ORFs)
+- Step 5A: UniRef90 database built (184M proteins) - took 42 min
+- Step 5B: CRASHED at block 18/33 after 8 hours (memory/timeout issue)
 
-### Data Downloaded
-- [x] SRR6356483 (ISS raw data) - 4.5 GB at `~/silent-hunter-downloads/`
-- [x] uniref90.fasta.gz - 35 GB on Google Drive
+**ALL INTERMEDIATE FILES LOST** - Colab session timed out before saving to Drive
 
-### Pending Downloads (quick, do on Colab)
-- [ ] SwissProt (~90 MB)
-- [ ] Human proteome (~15 MB)
-- [ ] Pfam-A.hmm (~300 MB)
+### Data on Google Drive (SAFE)
+- [x] SRR6356483 (ISS raw data) - 4.5 GB
+- [x] uniref90.fasta.gz - 43 GB
 
-### Next Steps
-1. Upload SRR6356483 to Google Drive
-2. Run Colab notebook
-3. Fill in FAHDYCONX.md transition log as pipeline runs
-4. Complete manual verification steps (HHblits, Foldseek)
+### Lessons Learned
+1. **SAVE TO DRIVE AFTER EVERY STEP** - Colab local storage is temporary!
+2. SRA Toolkit needs manual binary install (not pip)
+3. MEGAHIT takes ~8 hours for 40M reads
+4. DIAMOND --sensitive mode may cause memory issues
+5. Use safer DIAMOND settings: --threads 2 --block-size 2 --index-chunks 4
+
+### Next Session Plan
+1. Start from Step 1 (data already on Drive)
+2. Save to Drive after EACH step completes
+3. Use safer DIAMOND settings for Step 5B
+4. Expected total time: ~15 hours (split over 2 days)
 
 ## File Locations
 

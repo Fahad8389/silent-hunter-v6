@@ -125,20 +125,18 @@ INPUT:
   - Size: 4.5 GB
 
 PROCESS:
-  - Tool: fastq-dump (SRA Toolkit)
-  - Command: fastq-dump --split-files --gzip SRR6356483
-  - Parameters:
-    - --split-files: Separate paired-end reads into R1 and R2
-    - --gzip: Compress output
+  - Tool: fastq-dump (SRA Toolkit 3.0.0)
+  - Command: /content/sratoolkit.3.0.0-ubuntu64/bin/fastq-dump --split-files SRR6356483
+  - Note: pip install sra-tools DOES NOT WORK - must download binary!
+  - Time: ~1 hour
 
 OUTPUT:
-  - Files: SRR6356483_1.fastq.gz, SRR6356483_2.fastq.gz
-  - Read count: [TBD - fill after running]
-  - Size: [TBD]
+  - Files: SRR6356483_1.fastq.gz (2.9 GB), SRR6356483_2.fastq.gz (3.4 GB)
+  - Read count: 40,440,324 paired-end reads
 
 VERIFICATION:
-  - [ ] Both files exist
-  - [ ] Read counts match between R1 and R2
+  - [x] Both files exist
+  - [x] Read counts verified: 40,440,324 reads
 ```
 
 ### Step 2 → Step 3: Quality Control
@@ -146,29 +144,30 @@ VERIFICATION:
 ```
 INPUT:
   - Files: SRR6356483_1.fastq.gz, SRR6356483_2.fastq.gz
-  - Read count: [TBD]
+  - Read count: 80,880,648 reads (40.4M pairs)
 
 PROCESS:
   - Tool: fastp v0.23
-  - Command: [exact command]
-  - Parameters:
-    - --cut_mean_quality 20: Remove bases below Q20
-    - --length_required 50: Remove reads < 50bp
-    - WHY these values: Standard for Illumina metagenome data
+  - Command: fastp -i SRR6356483_1.fastq.gz -I SRR6356483_2.fastq.gz
+             -o clean_1.fastq.gz -O clean_2.fastq.gz
+             --detect_adapter_for_pe --cut_front --cut_tail
+             --cut_window_size 4 --cut_mean_quality 20 --length_required 50
+  - Time: ~15-20 minutes
 
 OUTPUT:
   - Files: clean_1.fastq.gz, clean_2.fastq.gz
-  - Read count: [TBD]
+  - Read count: 79,292,500 reads
 
 CHANGE:
-  - Before: [X] reads
-  - After: [Y] reads
-  - Removed: [Z] reads ([%]%)
+  - Before: 80,880,648 reads
+  - After: 79,292,500 reads
+  - Removed: 1,588,148 reads (2%)
+  - Survival rate: 98.0% - EXCELLENT
   - Reason: Low quality bases, short reads, adapters
 
 VERIFICATION:
-  - [ ] fastp HTML report reviewed
-  - [ ] Survival rate > 80% (expected for good data)
+  - [x] fastp HTML report generated
+  - [x] Survival rate 98% > 80% threshold
 ```
 
 ### Step 3 → Step 4: Assembly
@@ -176,25 +175,25 @@ VERIFICATION:
 ```
 INPUT:
   - Files: clean_1.fastq.gz, clean_2.fastq.gz
-  - Read count: [TBD]
+  - Read count: 79,292,500 reads
 
 PROCESS:
   - Tool: MEGAHIT v1.2.9
-  - Command: [exact command]
-  - Parameters:
-    - --min-contig-len 500: Ignore contigs < 500bp
-    - --k-min 21 --k-max 141: K-mer range for assembly
-    - WHY: Standard for metagenome assembly
+  - Command: megahit -1 clean_1.fastq.gz -2 clean_2.fastq.gz -o assembly
+             --min-contig-len 500 --k-min 21 --k-max 141 --k-step 12 -t 4 -m 0.9
+  - K-mer list: 21,33,45,57,69,81,93,105,117,129,141 (11 iterations)
+  - Time: 28,755 seconds (~8 hours)
 
 OUTPUT:
   - File: final.contigs.fa
-  - Contig count: [TBD]
-  - N50: [TBD]
-  - Total size: [TBD]
+  - Contig count: 312,709
+  - N50: 1,733 bp (BETTER than expected 700-1500)
+  - Total size: 432,707,043 bp
+  - Largest contig: 72,044 bp
 
 VERIFICATION:
-  - [ ] Assembly completed without errors
-  - [ ] N50 reasonable (expect 700-1500 bp)
+  - [x] Assembly completed without errors
+  - [x] N50 = 1,733 bp (above expected range - good quality)
 ```
 
 ### Step 4 → Step 5: ORF Prediction
@@ -202,54 +201,68 @@ VERIFICATION:
 ```
 INPUT:
   - File: final.contigs.fa
-  - Contig count: [TBD]
+  - Contig count: 312,709
 
 PROCESS:
   - Tool: Prodigal v2.6.3
-  - Command: prodigal -i contigs.fa -a proteins.faa -p meta
+  - Command: prodigal -i assembly/final.contigs.fa -a proteins.faa -d genes.fna
+             -o genes.gff -f gff -p meta -q
   - Parameters:
-    - -p meta: Metagenomic mode (handles mixed organisms)
-    - WHY: Standard for metagenome ORF prediction
+    - -p meta: Metagenomic mode (required for mixed organisms)
+  - Time: ~10-15 minutes
 
 OUTPUT:
   - File: proteins.faa
-  - Protein count: [TBD]
-  - Complete ORFs: [TBD]
-  - Partial ORFs: [TBD]
+  - Protein count: 448,015 (avg 1.4 per contig)
+  - Complete ORFs: 208,489 (47%) - have START and STOP codons
+  - Partial ORFs: 239,526 (53%) - cut off at contig edge
 
 VERIFICATION:
-  - [ ] Protein count reasonable (expect 1 ORF per ~1kb contig)
+  - [x] Protein count reasonable (448K from 312K contigs)
+  - [x] ~47% complete ORFs (normal for metagenome)
 ```
 
 ### Step 5 → Step 6: Homology Search (UniRef90)
 
 ```
+SESSION 1 - FAILED (Colab timeout before completion)
+
+STEP 5A: Database Build
 INPUT:
-  - File: proteins.faa
-  - Protein count: [TBD]
+  - File: uniref90.fasta.gz (43 GB)
 
 PROCESS:
-  - Tool: DIAMOND v2.1
-  - Command: diamond blastp -q proteins.faa -d uniref90 --id 25 --evalue 1e-5
-  - Parameters:
-    - --id 25: Minimum 25% sequence identity
-    - --evalue 1e-5: Statistical significance threshold
-    - WHY 25%: Below this is "twilight zone" - can't distinguish from random
+  - Tool: DIAMOND v2.1.8
+  - Command: diamond makedb --in uniref90.fasta.gz -d uniref90 --threads 4
+  - Time: 2,541 seconds (~42 minutes)
 
 OUTPUT:
-  - File: uniref90_hits.m8
-  - Proteins WITH hits: [TBD]
-  - Proteins WITHOUT hits: [TBD] ← These are NOVEL candidates
+  - File: uniref90.dmnd
+  - Sequences: 184,146,434 (184 million proteins)
+  - Letters: 64,621,732,275 (64.6 billion amino acids)
+  - NOTE: File was 0 bytes on Drive - DID NOT SAVE PROPERLY
 
-CHANGE:
-  - Total proteins: [X]
-  - With UniRef90 match: [Y]
-  - Novel (no match): [Z]
-  - Reason: Proteins with <25% identity to any known protein
+STEP 5B: Search - CRASHED
+INPUT:
+  - File: proteins.faa (448,015 proteins)
 
-VERIFICATION:
-  - [ ] Hit count verified
-  - [ ] Sample hits checked manually
+PROCESS:
+  - Tool: DIAMOND blastp
+  - Command: diamond blastp -q proteins.faa -d uniref90 --id 25 --evalue 1e-5
+             --sensitive --threads 4 --max-target-seqs 1
+  - CRASHED at: "Processing query block 1, reference block 18/33"
+  - Time before crash: ~8 hours
+  - Likely cause: Memory issue with --sensitive mode
+
+LESSON LEARNED:
+  - Use safer settings: --threads 2 --block-size 2 --index-chunks 4
+  - Save database to Drive IMMEDIATELY after build
+  - Consider --fast mode instead of --sensitive
+
+OUTPUT:
+  - File: uniref90_hits.m8 - NOT CREATED (search crashed)
+  - Proteins WITH hits: [TBD - next session]
+  - Proteins WITHOUT hits: [TBD - next session]
 ```
 
 ### Step 6 → Step 7: Quality Filtering
