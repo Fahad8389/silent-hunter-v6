@@ -18,34 +18,97 @@ See `FAHDYCONX.md` for full documentation system.
 
 ## Current Status
 
-**Date:** 2025-01-24
+**Date:** 2026-01-28
 
-### Session 1 Results (Lost due to Colab timeout)
-- Step 1: 40,440,324 paired-end reads extracted
+### Session 1 (Lost - Colab timeout)
+- Completed Steps 1-5A but all local files lost
+
+### Session 2 (2026-01-27)
+- Step 1: 40,440,324 paired-end reads (downloaded FASTQ from ENA - bypassed SRA Toolkit)
 - Step 2: 79,292,500 reads after QC (98% survival)
-- Step 3: 312,709 contigs assembled (N50=1,733 bp) - took 8 hours
-- Step 4: 448,015 proteins predicted (208,489 complete ORFs)
-- Step 5A: UniRef90 database built (184M proteins) - took 42 min
-- Step 5B: CRASHED at block 18/33 after 8 hours (memory/timeout issue)
+- Step 3: 312,714 contigs assembled (N50=1,731 bp)
+- Step 4: 447,912 proteins predicted (208,501 complete ORFs)
+- Step 5A: UniRef90 database built (184M proteins) - BUT .dmnd saved as 0 bytes on Drive AGAIN
+- Step 5B: DIAMOND search ran ~10/33 blocks (--sensitive mode), then cell crashed due to log_command() NameError, output file lost
+- **Intermediate files for Steps 1-4 saved to Drive successfully**
 
-**ALL INTERMEDIATE FILES LOST** - Colab session timed out before saving to Drive
+### Session 3 (2026-01-28)
+- Attempted to resume Step 5B but uniref90.dmnd was 0 bytes on Drive
+- Started rebuilding database DIRECTLY on Drive (to avoid 0-byte copy issue)
+- Session ended before completion (compute units running low)
 
-### Data on Google Drive (SAFE)
-- [x] SRR6356483 (ISS raw data) - 4.5 GB
-- [x] uniref90.fasta.gz - 43 GB
+### Data on Google Drive (VERIFIED 2026-01-28)
+```
+MyDrive/SilentHunter_v6/
+├── uniref90.fasta.gz              # 43 GB ✅
+├── SRR6356483                     # 4.5 GB ✅
+├── databases/
+│   └── uniref90.dmnd              # 0 bytes ❌ BROKEN - MUST REBUILD
+├── intermediate/
+│   ├── assembly/                  # ✅ saved
+│   ├── clean_1.fastq.gz           # 2.8 GB ✅
+│   ├── clean_2.fastq.gz           # 3.3 GB ✅
+│   ├── orfs/                      # ✅ saved
+│   └── proteins.faa               # 94 MB ✅
+├── output/                        # empty
+└── audit/                         # empty
+```
 
 ### Lessons Learned
 1. **SAVE TO DRIVE AFTER EVERY STEP** - Colab local storage is temporary!
-2. SRA Toolkit needs manual binary install (not pip)
-3. MEGAHIT takes ~8 hours for 40M reads
-4. DIAMOND --sensitive mode may cause memory issues
-5. Use safer DIAMOND settings: --threads 2 --block-size 2 --index-chunks 4
+2. SRA Toolkit is unreliable in Colab - download FASTQ directly from ENA instead
+3. **Copying large files (84GB .dmnd) to Drive with !cp FAILS silently** - always verify size after copy
+4. **BUILD DATABASE DIRECTLY ON DRIVE** - use `-d /content/drive/.../uniref90` to avoid copy failures
+5. DIAMOND --sensitive mode is very slow; --fast is acceptable with limitation noted in paper
+6. **Keep DIAMOND command in its own cell** - no Python logging code after it that can crash
+7. Colab Pro gives limited compute units (~15.82 units, ~1.95/hr = ~8 hours)
+8. Use CPU + High-RAM (not GPU) for bioinformatics tools
+9. Always verify file sizes on Drive: `!ls -lh {path}` after every save
 
-### Next Session Plan
-1. Start from Step 1 (data already on Drive)
-2. Save to Drive after EACH step completes
-3. Use safer DIAMOND settings for Step 5B
-4. Expected total time: ~15 hours (split over 2 days)
+### Next Session Plan (RESUME FROM STEP 5)
+1. Mount Drive
+2. Install DIAMOND: `wget + tar + mv to /usr/local/bin/`
+3. **Rebuild database DIRECTLY on Drive:** `diamond makedb --in {BASE_DIR}/uniref90.fasta.gz -d {BASE_DIR}/databases/uniref90 --threads 4`
+4. **VERIFY .dmnd file is NOT 0 bytes**
+5. Copy proteins.faa locally: `cp {BASE_DIR}/intermediate/proteins.faa .`
+6. Run search with --fast mode, output directly to Drive:
+   `diamond blastp -q proteins.faa -d {BASE_DIR}/databases/uniref90 -o {BASE_DIR}/intermediate/uniref90_hits.m8 --id 25 --evalue 1e-5 --fast --threads 4 --block-size 4 --index-chunks 2`
+7. Continue with Steps 5C, 5D, 6, 7, 8
+
+### Resume Cell (copy-paste into first Colab cell)
+```python
+# RESUME - Install DIAMOND + Rebuild DB + Run Search
+from google.colab import drive
+drive.mount('/content/drive')
+
+# Install DIAMOND
+!wget -q https://github.com/bbuchfink/diamond/releases/download/v2.1.8/diamond-linux64.tar.gz
+!tar -xzf diamond-linux64.tar.gz
+!mv diamond /usr/local/bin/
+
+BASE_DIR = "/content/drive/MyDrive/SilentHunter_v6"
+
+# Build database DIRECTLY on Drive
+print("Building database directly on Drive...")
+!diamond makedb --in {BASE_DIR}/uniref90.fasta.gz -d {BASE_DIR}/databases/uniref90 --threads 4
+
+# VERIFY - must NOT be 0 bytes
+!ls -lh {BASE_DIR}/databases/uniref90.dmnd
+
+# Copy proteins locally for speed
+!cp {BASE_DIR}/intermediate/proteins.faa .
+
+# Run DIAMOND search - output directly to Drive
+print("Running DIAMOND search...")
+!diamond blastp -q proteins.faa -d {BASE_DIR}/databases/uniref90 -o {BASE_DIR}/intermediate/uniref90_hits.m8 --id 25 --evalue 1e-5 --fast --threads 4 --block-size 4 --index-chunks 2
+
+# Verify
+!ls -lh {BASE_DIR}/intermediate/uniref90_hits.m8
+print("Step 5B complete and saved to Drive")
+```
+
+### Paper Limitation Note
+> Homology searches were performed using DIAMOND in fast mode rather than sensitive mode due to computational constraints. This may result in a small number of additional false novel proteins, though the 25% identity threshold provides a conservative baseline.
 
 ## File Locations
 
@@ -56,15 +119,21 @@ See `FAHDYCONX.md` for full documentation system.
   └── SRR6356483             # 4.5 GB ISS raw data
 ```
 
-### Google Drive
+### Google Drive (verified 2026-01-28)
 ```
 MyDrive/SilentHunter_v6/
+├── uniref90.fasta.gz         # 43 GB (raw sequences)
+├── SRR6356483                # 4.5 GB (raw SRA)
 ├── databases/
-│   └── uniref90.fasta.gz    # 35 GB (already there)
-├── data/                     # Upload SRR6356483 here
-├── intermediate/             # Pipeline creates this
-├── output/                   # Final results
-└── audit/                    # Logs and checksums
+│   └── uniref90.dmnd         # BROKEN (0 bytes) - must rebuild
+├── intermediate/
+│   ├── assembly/             # Step 3 output
+│   ├── clean_1.fastq.gz      # 2.8 GB
+│   ├── clean_2.fastq.gz      # 3.3 GB
+│   ├── orfs/                 # Step 4 output
+│   └── proteins.faa          # 94 MB
+├── output/                   # Empty - final results go here
+└── audit/                    # Empty
 ```
 
 ## Pipeline Overview
